@@ -1,0 +1,176 @@
+swagger: "2.0"
+info:
+  description: "This is an adapter service to proxy information from AWS Cost Explorer API."
+  version: "1.0.0"
+  title: "AWS Cost API Adapter"
+  termsOfService: "http://swagger.io/terms/"
+  contact:
+    email: "nicole.tornow@consort-group.com"
+basePath: "/api/v1/aws-costs-adapter"
+schemes:
+- "http"
+paths:
+  /costs:
+    get:
+      tags:
+      - "Costs"
+      description: "Get costs for AWS resources per month."
+      operationId: "getCosts"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "month"
+        type: integer
+        in: query
+        description: "Defines month to request costs for"
+        required: true
+      - name: "year"
+        type: integer
+        in: query
+        description: "Defines the year of the month to request costs for."
+        required: true
+      responses:
+        200:
+          description: "Returns a list of AWS cost information per month and by groups."
+          schema:
+            $ref: '#/definitions/AwsCosts'
+        400:
+          description: "Bad request syntax."
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        401:
+          description: "Unauthorized Access."
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        403:
+          description: "Bad authorization credentials."
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: "Requested resource could not be found."
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        500:
+          description: "Internal failure during processing your request occured."
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /resource-groups:
+      get:
+        tags:
+        - "Costs"
+        description: "Get current available groups to calculate costs"
+        operationId: "getResourceGroups"
+        responses:
+          200:
+            description: "Returns a list of current available tags."
+            schema:
+              $ref: '#/definitions/ResourceGroup'
+          401:
+            description: "Unauthorized Access."
+            schema:
+              $ref: "#/definitions/ErrorResponse"
+          403:
+            description: "Bad authorization credentials."
+            schema:
+              $ref: "#/definitions/ErrorResponse"
+          404:
+            description: "Requested resource could not be found."
+            schema:
+              $ref: "#/definitions/ErrorResponse"
+          500:
+            description: "Internal failure during processing your request occured."
+            schema:
+              $ref: "#/definitions/ErrorResponse"
+definitions:
+  AwsCosts:
+    type: array
+    items:
+      $ref: "#/definitions/AwsCostObject"
+
+  AwsCostObject:
+    type: object
+    required:
+    - year
+    - month
+    - estimated
+    - awsCosts
+    - resourceGroup
+    description: "This entity describes the information retrieved from a costs request"
+    properties:
+      resourceGroup:
+        type: string
+      year:
+        type: integer
+      month:
+        type: integer
+        minimum: 0
+        maximum: 11
+      estimated:
+        type: boolean
+      awsCosts:
+        type: object
+        required:
+        - amount
+        - currency
+        properties:
+          amount:
+            type: number
+            format: double
+          currency:
+            type: string
+            enum:
+            - USD
+  ResourceGroup:
+    type: array
+    description: "This array describes the values retrieved from a get resource-groups request"
+    items:
+      type: string
+    required:
+    - items
+
+  ErrorResponse:
+    type: object
+    required:
+    - status
+    - message
+    - location
+    - time
+    properties:
+      status:
+        type: integer
+        description: "Represents the http status error that goes along with this error."
+      message:
+        type: string
+        description: "Should contain a short, meaningful description of the error case. Might be displayed to the end user."
+        example: "Could not create service 'some-name' because this service already exists."
+      trace:
+        type: array
+        description: "Contains a trace of errors if available. Only use for forwarding to developer. In case this is missing as it is optional use location to identify where error happened originally."
+        items:
+          $ref: "#/definitions/TracePoint"
+      location:
+        type: string
+        description: "Field that indicates where the error occured. This is a mandatory field and should be considered in case trace is not available."
+      time:
+        type: string
+        format: date-time
+        description: "The exact time the error occured within microservice."
+  TracePoint:
+    type: "object"
+    required:
+    - methodName
+    - fileName
+    - lineNumber
+    - className
+    - nativeMethod
+    properties:
+      methodName:
+        type: "string"
+      fileName:
+        type: "string"
+      lineNumber:
+        type: "integer"
+      className:
+        type: "string"
+      nativeMethod:
+        type: "boolean"
